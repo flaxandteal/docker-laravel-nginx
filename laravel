@@ -1,0 +1,96 @@
+server {
+    listen 80;
+    server_name LARAVEL_SERVER_NAME;
+    if ($http_user_agent !~ "facebookexternalhit") {
+        return 301 https://$server_name$request_uri;
+    }
+}
+
+server {
+    client_max_body_size 20M;
+    listen 443 default_server;
+    server_name localhost;
+    ssl on;
+    ssl_certificate /data/secrets/server.crt;
+    ssl_certificate_key /data/secrets/server.key;
+    fastcgi_param HTTPS on;
+    fastcgi_param HTTP_SCHEME https;
+
+    root /data/www/public;
+    index index.php index.html index.htm;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+
+        if (!-d $request_filename) {
+            rewrite ^(.+)/$ /$1;
+        }
+
+        if (!-e $request_filename) {
+            rewrite ^(.*)$ /index.php?$1 last;
+            break;
+        }
+    }
+
+    location /l/admin {
+        rewrite ^/l/admin/?$ /l/admin/home;
+        rewrite ^/l/admin/([a-zA-Z0-9_-]+)$ /l/admin/index.php?1=$1 last;
+        rewrite ^/l/admin/(.*)/$ /l/admin/$1 redirect;
+
+        if (!-e $request_filename) {
+            rewrite ^/l/admin/(.*)$ /l/admin/index.php last;
+        }
+
+        location ~ \.php$ {
+                location ~ index[0-9]?\.php$|updateList.php$ {
+                    allow all;
+                    include fastcgi_params;
+                    fastcgi_pass phpfpm_backend;
+                    fastcgi_split_path_info ^(.+\.php)(/.+)$;
+                    fastcgi_index index.php;
+                    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                    fastcgi_intercept_errors off;
+                    fastcgi_buffer_size 16k;
+                    fastcgi_buffers 4 16k;
+                }
+
+                location ~ \.php$ {
+                    deny all;
+                }
+        }
+
+    }
+
+    location ~ /l/.*\.php {
+        include fastcgi_params;
+        fastcgi_pass phpfpm_backend;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_intercept_errors off;
+        fastcgi_buffer_size 16k;
+        fastcgi_buffers 4 16k;
+    }
+
+    location /l/ {
+        rewrite ^/l/([a-zA-Z0-9_-]+)/?$ /l/$1.php?page=$1 last;
+        rewrite ^/l/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)/?$ /l/$1.php?page=$1&subpage=$2 last;
+        rewrite ^/l/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)/?$ /l/$1.php?page=$1&subpage=$2&note=$3 last;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass phpfpm_backend;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_intercept_errors off;
+        fastcgi_buffer_size 16k;
+        fastcgi_buffers 4 16k;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+}
