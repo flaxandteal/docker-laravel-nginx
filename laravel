@@ -11,12 +11,12 @@ server {
     listen 443 default_server;
     server_name localhost;
     ssl on;
-    ssl_certificate /data/secrets/server.crt;
-    ssl_certificate_key /data/secrets/server.key;
+    ssl_certificate /secrets/server.crt;
+    ssl_certificate_key /secrets/server.key;
     fastcgi_param HTTPS on;
     fastcgi_param HTTP_SCHEME https;
 
-    root /data/www/public;
+    root /var/www/app/public;
     index index.php index.html index.htm;
 
     location / {
